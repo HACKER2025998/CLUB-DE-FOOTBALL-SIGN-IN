@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -137,11 +139,7 @@
         .jersey-item {
             border: 3px solid #ddd;
             border-radius: 10px;
-        
-            padding-left: 5px ;
-            padding-right:5px ;
-            padding-top : 5px; ;
-            padding-bottom: 5px ;
+            padding: 20px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
@@ -204,6 +202,12 @@
             box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
         }
 
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .error {
             color: #dc3545;
             font-size: 0.9em;
@@ -229,6 +233,28 @@
             display: none;
         }
 
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         @media (max-width: 768px) {
             .jersey-grid {
                 grid-template-columns: 1fr;
@@ -249,9 +275,13 @@
         </div>
 
         <div class="content">
-            <!-- SUCCESS/ERROR MESSAGES -->
+            <!-- MESSAGES -->
             <div id="successMsg" class="success"></div>
             <div id="errorMsg" class="alert-error"></div>
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Traitement en cours...</p>
+            </div>
 
             <!-- SECTION INSCRIPTION -->
             <div id="inscription" class="section active">
@@ -322,13 +352,13 @@
                     </div>
 
                     <div class="vote-section">
-                        <h3> Voter pour un Coordinateur</h3>
+                        <h3>📋 Voter pour un Coordinateur</h3>
                         <input type="text" id="voteCoordinateur" placeholder="Nom du coordinateur">
                     </div>
 
                     <!-- JERSEY SELECTION -->
                     <div class="jersey-selection">
-                        <h3 style="color: #667eea; margin-bottom: 15px;">👕 Choisir votre Maillot</h3>
+                        <h3 style="color: #667eea; margin-bottom: 15px;"> Choisir votre Maillot</h3>
                         <div class="jersey-grid">
                             <label class="jersey-item">
                                 <input type="radio" name="maillot" value="maillot1" required>
@@ -337,18 +367,18 @@
                             </label>
                             <label class="jersey-item">
                                 <input type="radio" name="maillot" value="maillot2" required>
-                                <div class="jersey-placeholder"><img src="/CLUBVOTEPRIMARY/img/photo2.jpeg" alt="la photo du maillot 2" width="150px" height="150px"></div>
+                                <div class="jersey-placeholder"> <img src="/CLUBVOTEPRIMARY/img/photo2.jpeg" alt="la photo du maillot 2"  width="150px" height="150px" ></div>
                                 <span>Maillot 2</span>
                             </label>
                             <label class="jersey-item">
                                 <input type="radio" name="maillot" value="maillot3" required>
-                                <div class="jersey-placeholder"><img src="/CLUBVOTEPRIMARY/img/photo3.jpeg"  width="150px" height="150px" alt="la photo du maillot 3"></div>
+                                <div class="jersey-placeholder"> <img src="/CLUBVOTEPRIMARY/img/photo3.jpeg" alt="la photo du maillot 3"  width="150px" height="150px" ></div>
                                 <span>Maillot 3</span>
                             </label>
-                             <label class="jersey-item">
+                            <label class="jersey-item">
                                 <input type="radio" name="maillot" value="maillot4" required>
-                                <div class="jersey-placeholder"><img src="/CLUBVOTEPRIMARY/img/photo4.jpeg"  width="150px" height="150px" alt="la photo du maillot 4"></div>
-                                <span>Maillot 4</span>
+                                <div class="jersey-placeholder"> <img src="/CLUBVOTEPRIMARY/img/photo4.jpeg" alt="la photo du maillot 4"  width="150px" height="150px" ></div>
+                                <span>Maillot 3</span>
                             </label>
                         </div>
                         <span class="error" id="maillotError">Veuillez choisir un maillot</span>
@@ -361,13 +391,13 @@
                     </div>
                     <span class="error" id="termsError">Vous devez accepter les conditions</span>
 
-                    <button type="submit" class="btn">S'INSCRIRE</button>
+                    <button type="submit" class="btn" id="btnInscription">S'INSCRIRE</button>
                 </form>
             </div>
 
             <!-- SECTION VOTE -->
             <div id="vote" class="section">
-                <h2 style="margin-bottom: 25px; color: #333;">🗳️ Vote</h2>
+                <h2 style="margin-bottom: 25px; color: #333;"> Vote</h2>
                 <form id="voteForm">
                     <div class="form-group">
                         <label>Email *</label>
@@ -406,13 +436,18 @@
                         <input type="text" id="voteOnlyCoordinateur" placeholder="Nom du coordinateur" required>
                     </div>
 
-                    <button type="submit" class="btn">VOTER</button>
+                    <button type="submit" class="btn" id="btnVote">VOTER</button>
                 </form>
             </div>
         </div>
     </div>
 
     <script>
+        // Configuration de l'API - CHANGEZ CES URLS SELON VOTRE SERVEUR
+        const API_URL = 'http://localhost/club_football'; // Changez selon votre configuration
+        const API_INSCRIPTION = `${API_URL}/inscription.php`;
+        const API_VOTE = `${API_URL}/vote.php`;
+
         // TAB SWITCHING
         function showTab(tabName) {
             const tabs = document.querySelectorAll('.tab');
@@ -424,12 +459,39 @@
             event.target.classList.add('active');
             document.getElementById(tabName).classList.add('active');
             
-            // Reset messages
-            document.getElementById('successMsg').style.display = 'none';
-            document.getElementById('errorMsg').style.display = 'none';
+            hideMessages();
         }
 
-        // JERSEY SELECTION HIGHLIGHTING
+        function hideMessages() {
+            document.getElementById('successMsg').style.display = 'none';
+            document.getElementById('errorMsg').style.display = 'none';
+            document.getElementById('loading').style.display = 'none';
+            document.querySelectorAll('.error').forEach(e => e.style.display = 'none');
+        }
+
+        function showSuccess(message) {
+            hideMessages();
+            const successMsg = document.getElementById('successMsg');
+            successMsg.textContent = message;
+            successMsg.style.display = 'block';
+            window.scrollTo(0, 0);
+        }
+
+        function showError(message) {
+            hideMessages();
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.textContent = message;
+            errorMsg.style.display = 'block';
+            window.scrollTo(0, 0);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+            document.getElementById('btnInscription').disabled = show;
+            document.getElementById('btnVote').disabled = show;
+        }
+
+        // JERSEY SELECTION
         document.querySelectorAll('.jersey-item').forEach(item => {
             item.addEventListener('click', function() {
                 document.querySelectorAll('.jersey-item').forEach(i => i.classList.remove('selected'));
@@ -440,17 +502,10 @@
         // FORM INSCRIPTION
         document.getElementById('inscriptionForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-
-           
-            
-            // Reset errors
-            document.querySelectorAll('.error').forEach(e => e.style.display = 'none');
-            document.getElementById('successMsg').style.display = 'none';
-            document.getElementById('errorMsg').style.display = 'none';
+            hideMessages();
             
             // Validation
             let isValid = true;
-            
             const nom = document.getElementById('nom').value.trim();
             const prenoms = document.getElementById('prenoms').value.trim();
             const dateNaissance = document.getElementById('dateNaissance').value;
@@ -502,53 +557,60 @@
             
             if (!isValid) return;
             
-            // Collect data
+            // Préparer les données
             const formData = {
                 nom: nom,
                 prenoms: prenoms,
                 dateNaissance: dateNaissance,
                 email: email,
                 poste: poste,
-                anneeLicence: anneeLicence,
+                anneeLicence: parseInt(anneeLicence),
                 voteCapitaine: document.getElementById('voteCapitaine').value.trim(),
                 voteSousCapitaine: document.getElementById('voteSousCapitaine').value.trim(),
                 voteCoach: document.getElementById('voteCoach').value.trim(),
                 voteCoordinateur: document.getElementById('voteCoordinateur').value.trim(),
                 maillot: maillot.value
             };
-             const response = await fetch("inscription.php", {
-        method: "POST",
-        body: formData
-    });
-    const result = await response.text();
-    document.getElementById('successMsg').textContent = result;
-    document.getElementById('successMsg').style.display = "block";
-    this.reset();
             
-            console.log('Données d\'inscription:', voteData);
+            // Envoyer à l'API
+            showLoading(true);
             
-            // Show success message
-            document.getElementById('successMsg').textContent = 'Inscription réussie! Vos données ont été enregistrées.';
-            document.getElementById('successMsg').style.display = 'block';
-            
-            // Reset form
-            this.reset();
-            document.querySelectorAll('.jersey-item').forEach(i => i.classList.remove('selected'));
+            try {
+                const response = await fetch(API_INSCRIPTION, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                showLoading(false);
+                
+                if (result.success) {
+                    showSuccess(result.message);
+                    // Reset form
+                    document.getElementById('inscriptionForm').reset();
+                    document.querySelectorAll('.jersey-item').forEach(i => i.classList.remove('selected'));
+                } else {
+                    showError(result.message || 'Erreur lors de l\'inscription');
+                }
+                
+            } catch (error) {
+                showLoading(false);
+                showError('Erreur de connexion au serveur. Vérifiez que les fichiers PHP sont bien configurés.');
+                console.error('Erreur:', error);
+            }
         });
 
         // FORM VOTE
         document.getElementById('voteForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
-            
-            // Reset errors
-            document.querySelectorAll('.error').forEach(e => e.style.display = 'none');
-            document.getElementById('successMsg').style.display = 'none';
-            document.getElementById('errorMsg').style.display = 'none';
+            hideMessages();
             
             // Validation
             let isValid = true;
-            
             const email = document.getElementById('voteEmail').value.trim();
             const anneeLicence = document.getElementById('voteAnneeLicence').value;
             const capitaine = document.getElementById('voteOnlyCapitaine').value.trim();
@@ -567,40 +629,49 @@
             }
             
             if (!capitaine || !sousCapitaine || !coach || !coordinateur) {
-                document.getElementById('errorMsg').textContent = 'Veuillez remplir tous les champs de vote.';
-                document.getElementById('errorMsg').style.display = 'block';
+                showError('Veuillez remplir tous les champs de vote.');
                 isValid = false;
             }
             
             if (!isValid) return;
             
-            // Collect data
+            // Préparer les données
             const voteData = {
                 email: email,
-                anneeLicence: anneeLicence,
+                anneeLicence: parseInt(anneeLicence),
                 voteCapitaine: capitaine,
                 voteSousCapitaine: sousCapitaine,
                 voteCoach: coach,
                 voteCoordinateur: coordinateur
             };
-            const response = await fetch("vote.php", {
-        method: "POST",
-        body: voteData
-    });
-    const result = await response.text();
-    document.getElementById('successMsg').textContent = result;
-    document.getElementById('successMsg').style.display = "block";
-    this.reset();
             
-            console.log('Données de vote:', voteData);
+            // Envoyer à l'API
+            showLoading(true);
             
-            // Show success message
-            document.getElementById('successMsg').textContent = 'Vote enregistré avec succès! Merci pour votre participation.';
-            document.getElementById('successMsg').style.display = 'block';
-            
-            // Reset form
-            this.reset();
+            try {
+                const response = await fetch(API_VOTE, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(voteData)
+                });
+                
+                const result = await response.json();
+                
+                showLoading(false);
+                
+                if (result.success) {
+                    showSuccess(result.message);
+                    // Reset form
+                    document.getElementById('voteForm').reset();
+                } else {
+                    showError(result.message || 'Erreur lors de l\'enregistrement du vote');
+                }
+                
+            } catch (error) {
+                showLoading(false);
+                showError('Erreur de connexion au serveur. Vérifiez que les fichiers PHP sont bien configurés.');
+                console.error('Erreur:', error);
+            }
         });
-    </script>
-</body>
-</html>
